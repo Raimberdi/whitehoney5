@@ -1,0 +1,6 @@
+{
+  "name": "Ala-Too Alpine Honey",
+  "description": "An exquisite Kyrgyz white honey boutique. Explore rare mountain varieties, customize artisanal jars, and discover personalized honey gastronomy pairings powered by Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
