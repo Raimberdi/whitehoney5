@@ -29,7 +29,11 @@ import {
   MessageCircle,
   Send,
   Phone,
-  Instagram
+  Instagram,
+  Sun,
+  Wind,
+  Droplets,
+  Thermometer
 } from "lucide-react";
 import { INSTALLED_HONEY_PRODUCTS, STATIC_REVIEWS, NOMADIC_HERITAGE_SLIDES, PRESET_PAIRINGS, HONEY_IMAGES } from "./data";
 import { HoneyProduct, CustomJarConfig, CartItem, SommelierPairing, CustomerReview, ChatMessage } from "./types";
@@ -59,6 +63,14 @@ const instagramButtonLabels: Record<string, string> = {
   ur: "انسٹاگرام"
 };
 
+const formatPrice = (priceUSD: number, lang: "en" | "es" | "ru" | "ar" | "ur" = "en"): string => {
+  const converted = Math.round(priceUSD * 3.67);
+  if (lang === "ar") {
+    return `${converted} د.إ`;
+  }
+  return `${converted} AED`;
+};
+
 const mapSectionTitles: Record<string, string> = {
   en: "Map of the High-Altitude Sanctuary",
   es: "Mapa del Santuario de Alta Montaña",
@@ -81,6 +93,105 @@ const apiaryLocationsDesc: Record<string, string> = {
   ru: "Исследуйте дикие ледниковые долины и координаты пасек, где собирается наш чистейший белый мед. Найдите наши роскошные бутики или отыщите морозные склоны высокогорных хребтов Ат-Баши.",
   ar: "استكشف الوديان الجليدية البرية وإحداثيات المناحل التي يُجمع فيها عسلنا الأبيض النقي. تتبع محلاتنا الفاخرة أو المنحدرات الجليدية في جبال آت-باشي.",
   ur: "ہمارے خالص سفید شہد کے ماخذ، جنگلی گلیشیئر کی وادیوں اور مکھیوں کے پالنے کے مقامات کو دریافت کریں۔ عیش و آرام کے تجربات تلاش کریں۔"
+};
+
+const getWeatherCondition = (code: number, lang: "en" | "es" | "ru" | "ar" | "ur"): string => {
+  const conditions: Record<string, Record<number, string>> = {
+    en: {
+      0: "Sunny / Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+      45: "Foggy", 48: "Depositing Rime Fog", 51: "Light Drizzle", 53: "Moderate Drizzle",
+      55: "Heavy Drizzle", 61: "Slight Rain", 63: "Moderate Rain", 65: "Heavy Rain",
+      80: "Slight Rain Showers", 81: "Moderate Rain Showers", 82: "Violent Rain Showers",
+      95: "Thunderstorm"
+    },
+    es: {
+      0: "Soleado / Despejado", 1: "Mayormente Despejado", 2: "Parcialmente Nublado", 3: "Nublado",
+      45: "Neblina", 48: "Neblina Escarchada", 51: "Llovizna Ligera", 53: "Llovizna Moderada",
+      55: "Llovizna Intensa", 61: "Lluvia Ligera", 63: "Lluvia Moderada", 65: "Lluvia Fuerte",
+      80: "Chubascos Ligeros", 81: "Chubascos Moderados", 82: "Chubascos Fuertes",
+      95: "Tormenta Eléctrica"
+    },
+    ru: {
+      0: "Ясно / Солнечно", 1: "В основном ясно", 2: "Переменная облачность", 3: "Пасмурно",
+      45: "Туман", 48: "Ледяной туман", 51: "Легкий моросящий дождь", 53: "Умеренная морось",
+      55: "Сильная морось", 61: "Небольшой дождь", 63: "Умеренный дождь", 65: "Сильный дождь",
+      80: "Небольшой ливень", 81: "Умеренный ливень", 82: "Сильный ливень",
+      95: "Гроза"
+    },
+    ar: {
+      0: "مشمس / صافٍ", 1: "غالباً صافٍ", 2: "غائم جزئياً", 3: "غائم بالكامل",
+      45: "ضبابي", 48: "ضباب صقيعي", 51: "رذاذ خفيف", 53: "رذاذ معتدل",
+      55: "رذاذ كثيف", 61: "مطر خفيف", 63: "مطر معتدل", 65: "مطر غزير",
+      80: "زخات مطر خفيفة", 81: "زخات مطر معتدلة", 82: "زخات مطر غزيرة",
+      95: "عاصفة رعدية"
+    },
+    ur: {
+      0: "صاف دھوپ / مطلع صاف", 1: "زیادہ تر صاف", 2: "جزوی طور پر ابر آلود", 3: "ابر آلود",
+      45: "دھندلا", 48: "برفیلی دھند", 51: "ہلکی بوندا باندی", 53: "معتدل بوندا باندی",
+      55: "تیز بوندا باندی", 61: "ہلکی بارش", 63: "معتدل بارش", 65: "تیز بارش",
+      80: "ہلکے شاور", 81: "معتدل شاور", 82: "تیز بارش کا طوفان",
+      95: "بجلی کی کڑک کے ساتھ طوفان"
+    }
+  };
+
+  const defaultTexts = {
+    en: "Warm Desert Breeze",
+    es: "Cálida Brisa del Desierto",
+    ru: "Теплый пустынный бриз",
+    ar: "نسيم الصحراء الدافئ",
+    ur: "گرم صحرائی ہوا"
+  };
+
+  const langSet = conditions[lang] || conditions["en"];
+  return langSet[code] || langSet[0] || defaultTexts[lang];
+};
+
+const weatherMarqueeTranslations: Record<string, Record<string, string>> = {
+  en: {
+    title: "DUBAI CLIMATE",
+    wind: "Wind",
+    humidity: "Humidity",
+    loading: "Fetching live Dubai atmospheric reports...",
+    bulletin1: "✦ EXTRAORDINARY DISPATCH: DIRECT LUXURY HELICOPTER CARAVAN DELIVERIES NOW DEPARTING TO DUBAI MARINA & PALM JUMEIRAH PENTHOUSES.",
+    bulletin2: "✦ RARE HARVEST DISCOVERY: ALA-TOO'S EXQUISITE 1928 ALPINE WHITE HONEY RESERVES EXHIBITED AT THE DUBAI FINANCIAL HARBOR SUITE.",
+    bulletin3: "✦ IMPERIAL TREATMENT: THE ROYAL GLACIAL JELLY COLLECTED BY HAND ON FREEZING SLOPES, AIR-COURIERED DIRECT TO YOUR DUBAI VILLA."
+  },
+  es: {
+    title: "CLIMA DE DUBÁI",
+    wind: "Viento",
+    humidity: "Humedad",
+    loading: "Obteniendo informes atmosféricos en vivo de Dubái...",
+    bulletin1: "✦ DESPACHO EXTRAORDINARIO: LOS ENVÍOS DE LUJO DIRECTOS EN HELICÓPTERO YA PARTEN HACIA LOS ÁTICOS DE DUBAI MARINA Y PALM JUMEIRAH.",
+    bulletin2: "✦ COSECHA EXCEPCIONAL CAPTURADA: LAS PRESTIGIOSAS RESERVAS DE MIEL BLANCA ALPINA 1928 SE PRESENTAN EN LA SUITE DEL PUERTO FINANCIERO DE DUBÁI.",
+    bulletin3: "✦ TRATAMIENTO IMPERIAL: LA JALEA REAL GLACIAR PURA, COSECHADA A MANO EN DESFILADEROS HELADOS, SE CONSERVA EN FRÍO DIRECTO A SU RESIDENCIA."
+  },
+  ru: {
+    title: "ПОГОДА В ДУБАЕ",
+    wind: "Ветер",
+    humidity: "Влажность",
+    loading: "Погрузка актуальных метеорологических данных Дубая...",
+    bulletin1: "✦ ЭКСКЛЮЗИВНЫЕ НОВОСТИ: ПРЯМЫЕ ЧАРТЕРНЫЕ ПОСТАВКИ НАШЕГО ШЕДЕВРАЛЬНОГО МЕДА В ПЕНТХАУСЫ DUBAI MARINA И PALM JUMEIRAH.",
+    bulletin2: "✦ НАСТОЯЩИЙ СНОБИЗМ: РЕДЧАЙШИЕ ЗАПАСЫ РУЧНОГО ВЫСОКОГОРНОГО УРОЖАЯ 1928 ГОДА ПРЕДСТАВЛЕНЫ В ФИНАНСОВОМ КВАРТАЛЕ ДУБАЯ.",
+    bulletin3: "✦ КОРОЛЕВСКОЕ ПРИЗНАНИЕ: ГЛУБОКАЯ ГЛУХАЯ АЛЬПИЙСКАЯ МАТОЧНАЯ ЖЕЛЕ С ЛЕДНИКОВ КЫРГЫЗСТАНА ТЕПЕРЬ СРОЧНО ДОСТАВЛЯЕТСЯ В ВАШУ ВИЛЛУ."
+  },
+  ar: {
+    title: "طقس دبي الآن",
+    wind: "الرياح",
+    humidity: "الرطوبة",
+    loading: "جاري تحميل بيانات الأرصاد الجوية والتحديثات الجوية لإمارة دبي...",
+    bulletin1: "✦ تسليم فوري وحصري عبر طائرات الهليكوبتر الخاصة لجميع أجنحة نخلة جميرا ودبي مارينا الفخمة.",
+    bulletin2: "✦ عسل ألا-تو الجبلي الأبيض النادر لعام ١٩٢٨ متاح الآن بالكامل لأصحاب الهوايات والذواقة الفاخرة في دبي.",
+    bulletin3: "✦ الغذاء الملكي الجليدي الطازج المغذى يدوياً على جبال آت-باشي، يُشحن خصيصاً لمقر إقامتك الخاص في دبي."
+  },
+  ur: {
+    title: "دبئی کا موسم",
+    wind: "ہوا",
+    humidity: "نمی",
+    loading: "دبئی کے موجودہ درجہ حرارت اور فضائی دباؤ کی رپورٹ...",
+    bulletin1: "✦ خاص پیشکش: دبئی مارینا اور پام جمیرا کے پینٹ ہاؤسز کے لیے نجی ہیلی کاپٹر کے ذریعے براہ راست ترسیل شروع کر دی گئی ہے۔",
+    bulletin2: "✦ نایاب ذخیرہ: علاء ٹو کا 1928 کا برفانی سفید شہد اب دبئی فنانشل ہاربر میں خصوصی طور پر نمائش کے لیے پیش کر دیا گیا ہے۔",
+    bulletin3: "✦ شاہی تحفہ: گلیشیئر کا خالص ترین شہد جو کہ انتہائی سرد چوٹیوں سے چنا گیا، اب براہ راست آپ کے دبئی محل میں پہنچایا جا رہا ہے۔"
+  }
 };
 
 export default function App() {
@@ -120,6 +231,60 @@ export default function App() {
   const localizedReviews = LOCALIZED_REVIEWS[currentLang] || LOCALIZED_REVIEWS["en"] || STATIC_REVIEWS;
   const localizedHeritageSlides = LOCALIZED_HERITAGE_SLIDES[currentLang] || LOCALIZED_HERITAGE_SLIDES["en"] || NOMADIC_HERITAGE_SLIDES;
   const localizedPairings = LOCALIZED_PAIRINGS[currentLang] || LOCALIZED_PAIRINGS["en"] || PRESET_PAIRINGS;
+
+  // Dubai Weather State & Fetch Hook
+  const [dubaiWeather, setDubaiWeather] = useState<{
+    temp: number | null;
+    humidity: number | null;
+    wind: number | null;
+    conditionCode: number | null;
+    loading: boolean;
+    error: boolean;
+  }>({
+    temp: 34, // Warm starting luxury average temperature
+    humidity: 48,
+    wind: 12,
+    conditionCode: 0,
+    loading: true,
+    error: false
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=25.2048&longitude=55.2708&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m");
+        if (!res.ok) throw new Error("Weather request failed");
+        const data = await res.json();
+        if (isMounted && data.current) {
+          setDubaiWeather({
+            temp: Math.round(data.current.temperature_2m),
+            humidity: Math.round(data.current.relative_humidity_2m),
+            wind: Math.round(data.current.wind_speed_10m),
+            conditionCode: data.current.weather_code,
+            loading: false,
+            error: false
+          });
+        }
+      } catch (err) {
+        console.warn("Could not retrieve real-time Dubai weather via Open-Meteo:", err);
+        if (isMounted) {
+          setDubaiWeather(prev => ({
+            ...prev,
+            loading: false,
+            error: true
+          }));
+        }
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 600000); // 10 minutes
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Navigation & View State
   const [activeTab, setActiveTab] = useState<"collection" | "studio" | "sommelier" | "story">("collection");
@@ -657,6 +822,94 @@ export default function App() {
       
       {/* EXQUISITE BOUTIQUE HEADER */}
       <header className="sticky top-0 z-40 bg-brand-cream/90 backdrop-blur-md border-b border-brand-brown/40 transition-all">
+        
+        {/* DUBAI ATMOSPHERIC TICKER TRAY */}
+        <div id="dubai-weather-marquee" className="bg-[#2D2926] text-[#FCFAF7] border-b border-brand-gold/20 py-2.5 overflow-hidden relative select-none">
+          <div className={`flex whitespace-nowrap min-w-full ${currentLang === 'ar' || currentLang === 'ur' ? 'animate-marquee-reverse' : 'animate-marquee'}`}>
+            {/* Part 1 */}
+            <div className="flex items-center space-x-8 px-4 shrink-0">
+              <span className="flex items-center space-x-1.5 text-[10px] font-mono tracking-widest text-[#C5A059] uppercase font-bold">
+                <Sun className="w-3.5 h-3.5 text-brand-gold shrink-0 animate-pulse" />
+                <span>{weatherMarqueeTranslations[currentLang]?.title || weatherMarqueeTranslations["en"].title}:</span>
+              </span>
+              <span className="text-[11px] font-mono text-white flex items-center space-x-1 themes-weather-values">
+                {dubaiWeather.loading ? (
+                  <span className="text-stone-400 italic text-[10px]">{weatherMarqueeTranslations[currentLang]?.loading || weatherMarqueeTranslations["en"].loading}</span>
+                ) : (
+                  <span className="flex items-center space-x-2">
+                    <span className="font-bold text-brand-gold text-xs">{dubaiWeather.temp !== null ? `${dubaiWeather.temp}°C` : "34°C"}</span>
+                    <span className="text-stone-300">({getWeatherCondition(dubaiWeather.conditionCode ?? 0, currentLang)})</span>
+                    <span className="text-stone-500">|</span>
+                    <span className="flex items-center space-x-1 text-stone-300">
+                      <Wind className="w-3 h-3 text-[#C5A059]" />
+                      <span>{weatherMarqueeTranslations[currentLang]?.wind || weatherMarqueeTranslations["en"].wind}: {dubaiWeather.wind !== null ? `${dubaiWeather.wind} km/h` : "12 km/h"}</span>
+                    </span>
+                    <span className="text-stone-500">|</span>
+                    <span className="flex items-center space-x-1 text-stone-300">
+                      <Droplets className="w-3 h-3 text-[#C5A059]" />
+                      <span>{weatherMarqueeTranslations[currentLang]?.humidity || weatherMarqueeTranslations["en"].humidity}: {dubaiWeather.humidity !== null ? `${dubaiWeather.humidity}%` : "48%"}</span>
+                    </span>
+                  </span>
+                )}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet1 || weatherMarqueeTranslations["en"].bullet1}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet2 || weatherMarqueeTranslations["en"].bullet2}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet3 || weatherMarqueeTranslations["en"].bullet3}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+            </div>
+
+            {/* Part 2 (Exact Duplicate to enable seamless infinite scroll looping) */}
+            <div className="flex items-center space-x-8 px-4 shrink-0">
+              <span className="flex items-center space-x-1.5 text-[10px] font-mono tracking-widest text-[#C5A059] uppercase font-bold">
+                <Sun className="w-3.5 h-3.5 text-brand-gold shrink-0 animate-pulse" />
+                <span>{weatherMarqueeTranslations[currentLang]?.title || weatherMarqueeTranslations["en"].title}:</span>
+              </span>
+              <span className="text-[11px] font-mono text-white flex items-center space-x-1 themes-weather-values">
+                {dubaiWeather.loading ? (
+                  <span className="text-stone-400 italic text-[10px]">{weatherMarqueeTranslations[currentLang]?.loading || weatherMarqueeTranslations["en"].loading}</span>
+                ) : (
+                  <span className="flex items-center space-x-2">
+                    <span className="font-bold text-brand-gold text-xs">{dubaiWeather.temp !== null ? `${dubaiWeather.temp}°C` : "34°C"}</span>
+                    <span className="text-stone-300">({getWeatherCondition(dubaiWeather.conditionCode ?? 0, currentLang)})</span>
+                    <span className="text-stone-500">|</span>
+                    <span className="flex items-center space-x-1 text-stone-300">
+                      <Wind className="w-3 h-3 text-[#C5A059]" />
+                      <span>{weatherMarqueeTranslations[currentLang]?.wind || weatherMarqueeTranslations["en"].wind}: {dubaiWeather.wind !== null ? `${dubaiWeather.wind} km/h` : "12 km/h"}</span>
+                    </span>
+                    <span className="text-stone-500">|</span>
+                    <span className="flex items-center space-x-1 text-stone-300">
+                      <Droplets className="w-3 h-3 text-[#C5A059]" />
+                      <span>{weatherMarqueeTranslations[currentLang]?.humidity || weatherMarqueeTranslations["en"].humidity}: {dubaiWeather.humidity !== null ? `${dubaiWeather.humidity}%` : "48%"}</span>
+                    </span>
+                  </span>
+                )}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet1 || weatherMarqueeTranslations["en"].bullet1}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet2 || weatherMarqueeTranslations["en"].bullet2}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+              <span className="text-[10px] font-mono tracking-wider text-stone-300 uppercase">
+                {weatherMarqueeTranslations[currentLang]?.bullet3 || weatherMarqueeTranslations["en"].bullet3}
+              </span>
+              <span className="text-[#C5A059]/40 font-serif italic text-xs">◆</span>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab("collection")}>
             <div className="w-10 h-10 rounded-full border border-brand-gold bg-white flex items-center justify-center text-brand-gold shadow-sm">
@@ -911,7 +1164,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-semibold tracking-tight text-brand-ink">${suggestedProduct.price}</span>
+                        <span className="text-sm font-semibold tracking-tight text-brand-ink">{formatPrice(suggestedProduct.price, currentLang)}</span>
                         <button
                           onClick={() => addProductToCart(suggestedProduct)}
                           className="bg-brand-ink text-white hover:bg-brand-gold hover:text-[#F9F6F1] transition-all px-4 py-2 rounded-lg text-xs font-medium uppercase tracking-wider"
@@ -1059,7 +1312,7 @@ export default function App() {
 
                         {/* Card bottom actions */}
                         <div className="pt-2 flex items-center justify-between">
-                          <span className="text-xl font-semibold text-brand-ink font-serif">${product.price}</span>
+                          <span className="text-xl font-semibold text-brand-ink font-serif">{formatPrice(product.price, currentLang)}</span>
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setSelectedProduct(product)}
@@ -1213,7 +1466,7 @@ export default function App() {
                   <div className="flex items-center justify-between pt-4 border-t border-brand-brown/20">
                     <div>
                       <p className="text-[10px] uppercase font-mono tracking-widest text-[#E5DACE]">BOUTIQUE ESTIMATION</p>
-                      <h4 className="text-2xl font-serif text-[#F9F6F1]">${customJarPrice}</h4>
+                      <h4 className="text-2xl font-serif text-[#F9F6F1]">{formatPrice(customJarPrice, currentLang)}</h4>
                     </div>
                     <button
                       onClick={addCustomJarToCart}
@@ -1265,7 +1518,7 @@ export default function App() {
                       >
                         <h5 className="text-xs font-semibold text-brand-ink font-mono">250g Petite Flask</h5>
                         <p className="text-[10px] text-stone-500 mt-1 leading-snug">Elegant low-capacity glass flask with metal seal. Excellent sampler.</p>
-                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+$0</span>
+                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+{formatPrice(0, currentLang)}</span>
                       </div>
                       <div
                         onClick={() => setCustomJar(c => ({ ...c, size: "500g" }))}
@@ -1275,7 +1528,7 @@ export default function App() {
                       >
                         <h5 className="text-xs font-semibold text-brand-ink font-mono">500g Heavy Glass</h5>
                         <p className="text-[10px] text-stone-500 mt-1 leading-snug">Heavy bottom faceted luxury flask with wooden stopper overlay.</p>
-                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+$20</span>
+                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+{formatPrice(20, currentLang)}</span>
                       </div>
                       <div
                         onClick={() => setCustomJar(c => ({ ...c, size: "1000g_ceramic" }))}
@@ -1285,7 +1538,7 @@ export default function App() {
                       >
                         <h5 className="text-xs font-semibold text-brand-ink font-mono">1kg Ceramic Crock</h5>
                         <p className="text-[10px] text-stone-500 mt-1 leading-snug">Handmade clay crock baked with thermal-lining to preserve raw honey enzymes.</p>
-                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+$45</span>
+                        <span className="text-xs font-semibold font-mono block mt-2 text-brand-gold">+{formatPrice(45, currentLang)}</span>
                       </div>
                     </div>
                   </div>
@@ -1312,7 +1565,7 @@ export default function App() {
                           <h5 className="text-[11px] font-semibold text-brand-ink font-mono">{dip.name}</h5>
                           <p className="text-[9px] text-stone-550 italic leading-snug mt-0.5">{dip.desc}</p>
                           <span className="text-[10px] font-mono block mt-1.5 font-bold text-brand-gold">
-                            {dip.cost === 0 ? "Included" : `+$${dip.cost}`}
+                            {dip.cost === 0 ? "Included" : `+${formatPrice(dip.cost, currentLang)}`}
                           </span>
                         </div>
                       ))}
@@ -1331,8 +1584,8 @@ export default function App() {
                         className="w-full border border-brand-brown rounded-lg p-2.5 text-xs bg-brand-cream"
                       >
                         <option value="linen_wax">Raw Linen Wrap with Melted Beeswax Seal</option>
-                        <option value="scorched_crate">Scorched Siberian Pine Wooden Crate (+$15)</option>
-                        <option value="minimalist_gold">Minimalist Gold Leaf Paper Envelope (+$10)</option>
+                        <option value="scorched_crate">Scorched Siberian Pine Wooden Crate (+{formatPrice(15, currentLang)})</option>
+                        <option value="minimalist_gold">Minimalist Gold Leaf Paper Envelope (+{formatPrice(10, currentLang)})</option>
                       </select>
                     </div>
 
@@ -1340,7 +1593,7 @@ export default function App() {
                       <div className="flex items-center justify-between pt-4">
                         <div>
                           <span className="text-xs font-semibold text-brand-ink block font-mono">Include Nomadic Leather Charm</span>
-                          <span className="text-[10px] text-stone-500">Traditional hand-stamped leather thread overlay (+ $5)</span>
+                          <span className="text-[10px] text-stone-500">Traditional hand-stamped leather thread overlay (+ {formatPrice(5, currentLang)})</span>
                         </div>
                         <input
                           type="checkbox"
@@ -1896,7 +2149,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-brand-brown">
-                    <span className="text-2xl font-serif font-bold text-brand-gold">${activeProduct.price}</span>
+                    <span className="text-2xl font-serif font-bold text-brand-gold">{formatPrice(activeProduct.price, currentLang)}</span>
                     <button
                       onClick={() => {
                         addProductToCart(activeProduct);
@@ -2015,7 +2268,7 @@ export default function App() {
                             </div>
 
                             <div className="flex items-center space-x-3">
-                              <span className="text-xs font-bold text-brand-ink font-serif">${item.price * item.quantity}</span>
+                              <span className="text-xs font-bold text-brand-ink font-serif">{formatPrice(item.price * item.quantity, currentLang)}</span>
                               <button
                                 onClick={() => removeCartItem(item.id)}
                                 className="text-stone-400 hover:text-red-700 p-1 cursor-pointer transition-colors"
@@ -2065,21 +2318,21 @@ export default function App() {
                     <div className="space-y-2 text-xs text-[#2D2926] border-t border-brand-brown/40 pt-3">
                       <div className="flex justify-between">
                         <span>Cart Subtotal:</span>
-                        <strong className="text-brand-ink font-mono font-bold">${calculateSubtotal()}</strong>
+                        <strong className="text-brand-ink font-mono font-bold">{formatPrice(calculateSubtotal(), currentLang)}</strong>
                       </div>
                       {getDiscountAmount() > 0 && (
                         <div className="flex justify-between text-green-700">
                           <span>Introductory Reduction (15%):</span>
-                          <strong className="font-mono font-bold">-${getDiscountAmount()}</strong>
+                          <strong className="font-mono font-bold">-{formatPrice(getDiscountAmount(), currentLang)}</strong>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span>Glacier Carriage Freight:</span>
-                        <strong className="text-brand-ink font-mono font-bold">${getShippingCost()}</strong>
+                        <strong className="text-brand-ink font-mono font-bold">{formatPrice(getShippingCost(), currentLang)}</strong>
                       </div>
                       <div className="flex justify-between text-sm text-brand-ink font-bold border-t border-brand-brown pt-2 font-serif">
                         <span>Grand Total:</span>
-                        <span className="text-brand-gold font-mono text-base font-bold">${calculateTotal()}</span>
+                        <span className="text-brand-gold font-mono text-base font-bold">{formatPrice(calculateTotal(), currentLang)}</span>
                       </div>
                     </div>
 
@@ -2163,19 +2416,19 @@ export default function App() {
                       {placedOrderDetails.items.map((it: any, i: number) => (
                         <div key={i} className="flex justify-between text-[10px] text-brand-ink">
                           <span className="truncate max-w-[160px]">{it.quantity}x {it.name}</span>
-                          <span className="font-bold">${it.price * it.quantity}</span>
+                          <span className="font-bold">{formatPrice(it.price * it.quantity, currentLang)}</span>
                         </div>
                       ))}
                     </div>
 
                     <div className="space-y-1 text-[10px] pt-1 text-brand-ink">
-                      <div className="flex justify-between"><span>Carriage Freight ({placedOrderDetails.shippingInfo.deliveryTier}):</span> <span>${placedOrderDetails.shippingCost}</span></div>
+                      <div className="flex justify-between"><span>Carriage Freight ({placedOrderDetails.shippingInfo.deliveryTier}):</span> <span>{formatPrice(placedOrderDetails.shippingCost, currentLang)}</span></div>
                       {placedOrderDetails.discount > 0 && (
-                        <div className="flex justify-between text-green-700"><span>15% Reduction Applied:</span> <span>-${placedOrderDetails.discount}</span></div>
+                        <div className="flex justify-between text-green-700"><span>15% Reduction Applied:</span> <span>-{formatPrice(placedOrderDetails.discount, currentLang)}</span></div>
                       )}
                       <div className="flex justify-between text-xs font-bold text-brand-ink pt-2 border-t border-brand-brown/30">
                         <span>Sum Total:</span>
-                        <span className="text-brand-gold font-bold font-sans text-xs">${placedOrderDetails.total}</span>
+                        <span className="text-brand-gold font-bold font-sans text-xs">{formatPrice(placedOrderDetails.total, currentLang)}</span>
                       </div>
                     </div>
 
@@ -2288,7 +2541,7 @@ export default function App() {
                         >
                           <h5 className="text-xs font-semibold text-brand-ink font-mono">Standard Couriers</h5>
                           <p className="text-[10px] text-stone-500 mt-0.5 leading-snug">Insulated climate-stable freight. Delivered in 4 to 7 working days.</p>
-                          <span className="text-xs font-bold font-mono block mt-2 text-brand-gold">$8</span>
+                          <span className="text-xs font-bold font-mono block mt-2 text-brand-gold">{formatPrice(8, currentLang)}</span>
                         </div>
                         <div
                           onClick={() => setShippingForm(p => ({ ...p, deliveryTier: "caravan" }))}
@@ -2300,7 +2553,7 @@ export default function App() {
                         >
                           <h5 className="text-xs font-semibold text-brand-ink font-mono">Nomadic Caravan Air Express</h5>
                           <p className="text-[10px] text-stone-500 mt-0.5 leading-snug">Direct priority flight pack from Bishkek glaciers. Hand-inscribed courier seal.</p>
-                          <span className="text-xs font-bold font-mono block mt-2 text-brand-gold">$19</span>
+                          <span className="text-xs font-bold font-mono block mt-2 text-brand-gold">{formatPrice(19, currentLang)}</span>
                         </div>
                       </div>
                     </div>
@@ -2364,9 +2617,9 @@ export default function App() {
                           <div key={idx} className="flex justify-between text-xs border-b border-white/10 pb-2">
                             <div>
                               <p className="font-semibold text-stone-100 font-mono text-[11px] truncate max-w-[170px] uppercase">{cartItem.name}</p>
-                              <p className="text-[10px] text-stone-400 italic">Qty: {cartItem.quantity} x ${cartItem.price}</p>
+                              <p className="text-[10px] text-stone-400 italic">Qty: {cartItem.quantity} x {formatPrice(cartItem.price, currentLang)}</p>
                             </div>
-                            <span className="font-serif font-semibold text-brand-gold">${cartItem.price * cartItem.quantity}</span>
+                            <span className="font-serif font-semibold text-brand-gold">{formatPrice(cartItem.price * cartItem.quantity, currentLang)}</span>
                           </div>
                         ))}
                       </div>
@@ -2375,21 +2628,21 @@ export default function App() {
                       <div className="space-y-2 border-t border-white/20 pt-3 text-xs text-stone-300">
                         <div className="flex justify-between">
                           <span>Subtotal:</span>
-                          <span className="font-mono text-stone-100">${calculateSubtotal()}</span>
+                          <span className="font-mono text-stone-100">{formatPrice(calculateSubtotal(), currentLang)}</span>
                         </div>
                         {getDiscountAmount() > 0 && (
                           <div className="flex justify-between text-green-400">
                             <span>Promo Discount:</span>
-                            <span className="font-mono">-${getDiscountAmount()}</span>
+                            <span className="font-mono">-{formatPrice(getDiscountAmount(), currentLang)}</span>
                           </div>
                         )}
                         <div className="flex justify-between">
                           <span>Carriage freight:</span>
-                          <span className="font-mono text-stone-100">${getShippingCost()}</span>
+                          <span className="font-mono text-stone-100">{formatPrice(getShippingCost(), currentLang)}</span>
                         </div>
                         <div className="flex justify-between text-sm font-bold text-white border-t border-white/20 pt-2 font-serif">
                           <span>Grand Total:</span>
-                          <span className="text-brand-gold font-mono text-base font-bold">${calculateTotal()}</span>
+                          <span className="text-brand-gold font-mono text-base font-bold">{formatPrice(calculateTotal(), currentLang)}</span>
                         </div>
                       </div>
 
@@ -2410,7 +2663,7 @@ export default function App() {
                         type="submit"
                         className="w-full bg-brand-gold hover:bg-brand-gold/80 text-brand-ink font-bold p-3.5 rounded-lg text-xs tracking-wider uppercase transition-all shadow-md cursor-pointer"
                       >
-                        Transmit Sealed Secure Order (${calculateTotal()})
+                        Transmit Sealed Secure Order ({formatPrice(calculateTotal(), currentLang)})
                       </button>
                       <p className="text-[9px] text-stone-400 mt-2 italic text-center">
                         Upon transmission, your honey registry records will sync with high-altitude packaging centers automatically.
